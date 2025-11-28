@@ -337,6 +337,11 @@ calculate_mgidi <- function(data, traits, ideotype_direction = NULL) {
     x_min <- min(x, na.rm = TRUE)
     x_max <- max(x, na.rm = TRUE)
     
+    # Handle case where all values are identical (avoid division by zero)
+    if (x_max == x_min) {
+      return(rep(50, length(x)))  # Return midpoint value
+    }
+    
     if (ideotype_direction[trait] == "h") {
       # Higher is better: rescale so max = 100, min = 0
       rescaled <- ((x - x_min) / (x_max - x_min)) * 100
@@ -360,7 +365,13 @@ calculate_mgidi <- function(data, traits, ideotype_direction = NULL) {
   # Normalize to 0-100 scale
   max_dist <- max(distances, na.rm = TRUE)
   min_dist <- min(distances, na.rm = TRUE)
-  mgidi_values <- ((max_dist - distances) / (max_dist - min_dist)) * 100
+  
+  # Handle case where all distances are identical (avoid division by zero)
+  if (max_dist == min_dist) {
+    mgidi_values <- rep(100, length(distances))  # All equal = all at max
+  } else {
+    mgidi_values <- ((max_dist - distances) / (max_dist - min_dist)) * 100
+  }
   
   # Create result data frame
   result <- data.frame(
@@ -503,6 +514,8 @@ cat("\n--- Creating Visualizations ---\n")
 
 # Plot 1: MGIDI values bar plot
 plot_mgidi_bar <- function(mgidi_result, top_n = 20) {
+  # Ensure we don't exceed available rows
+  top_n <- min(top_n, nrow(mgidi_result))
   plot_data <- mgidi_result[1:top_n, ]
   plot_data$GEN <- factor(plot_data$GEN, levels = rev(plot_data$GEN))
   
@@ -637,7 +650,8 @@ cat("Selection intensity: 20%\n")
 cat("Genotypes selected:", nrow(selected_genotypes), "\n\n")
 
 cat("Top 5 genotypes:\n")
-for (i in 1:5) {
+top_n_display <- min(5, nrow(mgidi_result))
+for (i in 1:top_n_display) {
   cat(sprintf("  %d. %s (MGIDI: %.2f)\n", 
               i, mgidi_result$GEN[i], mgidi_result$MGIDI[i]))
 }
